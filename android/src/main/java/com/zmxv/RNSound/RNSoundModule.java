@@ -1,6 +1,7 @@
 package com.zmxv.RNSound;
 
 import android.content.Context;
+import android.content.ContextWrapper;
 import android.content.res.AssetFileDescriptor;
 import android.media.MediaPlayer;
 import android.media.MediaPlayer.OnCompletionListener;
@@ -20,6 +21,8 @@ import com.facebook.react.modules.core.DeviceEventManagerModule;
 import com.facebook.react.modules.core.ExceptionsManagerModule;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.util.HashMap;
 import java.util.Map;
 import java.io.IOException;
@@ -57,7 +60,8 @@ public class RNSoundModule extends ReactContextBaseJavaModule implements AudioMa
   }
 
   @ReactMethod
-  public void prepare(final String fileName, final Double key, final ReadableMap options, final Callback callback) {
+  public void prepare(final String _fileName, final Double key, final ReadableMap options, final Callback callback) {
+    String fileName = getInsteadFilePath(_fileName);
     MediaPlayer player = createMediaPlayer(fileName);
     if (player == null) {
       WritableMap e = Arguments.createMap();
@@ -320,7 +324,7 @@ public class RNSoundModule extends ReactContextBaseJavaModule implements AudioMa
       }
     }
   }
-	
+
   @Override
   public void onCatalystInstanceDestroy() {
     java.util.Iterator it = this.playerPool.entrySet().iterator();
@@ -458,5 +462,41 @@ public class RNSoundModule extends ReactContextBaseJavaModule implements AudioMa
     final Map<String, Object> constants = new HashMap<>();
     constants.put("IsAndroid", true);
     return constants;
+  }
+
+  private void copyFile(String in, String out) throws IOException{
+    FileInputStream fileIn = new FileInputStream(in);
+    FileOutputStream fileOut = new FileOutputStream(out);
+
+    byte[] buf = new byte[256];
+    int len;
+
+    while((len = fileIn.read(buf)) != -1){
+      fileOut.write(buf);
+    }
+
+    fileOut.flush();
+
+    fileOut.close();
+    fileIn.close();
+  }
+
+  private String getInsteadFilePath(String filePath) {
+    // Try finding file in app mount directory
+    if (filePath.startsWith("/mnt") || filePath.contains("/obb/")) {
+      File fileFromObb = new File(filePath);
+      String cacheDir = new ContextWrapper(this.context).getCacheDir() + "/";
+      String cacheFilePath = cacheDir + fileFromObb.getName();
+      File file = new File(cacheFilePath);
+      if (!file.exists()) {
+        try {
+          copyFile(filePath, cacheFilePath);
+        } catch (IOException e) {
+          return filePath;
+        }
+      }
+      return cacheFilePath;
+    }
+    return filePath;
   }
 }
