@@ -1,7 +1,9 @@
 package com.zmxv.RNSound;
 
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.content.res.AssetFileDescriptor;
+import android.content.res.AssetManager;
 import android.media.MediaPlayer;
 import android.media.MediaPlayer.OnCompletionListener;
 import android.media.MediaPlayer.OnErrorListener;
@@ -58,7 +60,13 @@ public class RNSoundModule extends ReactContextBaseJavaModule implements AudioMa
 
   @ReactMethod
   public void prepare(final String fileName, final Double key, final ReadableMap options, final Callback callback) {
-    MediaPlayer player = createMediaPlayer(fileName);
+    MediaPlayer player = null;
+    if(options.hasKey("applicationId") && options.hasKey("useAssetDelivery") && options.getBoolean("useAssetDelivery")) {
+      Log.d("RNSoundModule", options.getString("applicationId"));
+      player = createMediaPlayer(fileName, options.getString("applicationId"));
+    } else {
+      player = createMediaPlayer(fileName);
+    }
     if (options.hasKey("speed") && android.os.Build.VERSION.SDK_INT >= 23) {
       player.setPlaybackParams(player.getPlaybackParams().setSpeed((float)options.getDouble("speed")));
     }
@@ -204,7 +212,7 @@ public class RNSoundModule extends ReactContextBaseJavaModule implements AudioMa
       }
       return mediaPlayer;
     }
-    
+
     File file = new File(fileName);
     if (file.exists()) {
       mediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
@@ -219,6 +227,27 @@ public class RNSoundModule extends ReactContextBaseJavaModule implements AudioMa
     }
 
     return null;
+  }
+
+  protected MediaPlayer createMediaPlayer(final String fileName, final String applicationId) {
+    Context context = null;
+    MediaPlayer mediaPlayer = new MediaPlayer();
+    Log.i("RNSoundModule", fileName);
+    try {
+      context = this.context.createPackageContext(applicationId, 0);
+      AssetManager assetManager = context.getAssets();
+      AssetFileDescriptor afd = assetManager.openFd(fileName);
+      mediaPlayer.setDataSource(afd.getFileDescriptor(), afd.getStartOffset(), afd.getLength());
+      afd.close();
+    } catch (PackageManager.NameNotFoundException e) {
+      e.printStackTrace();
+      Log.e("RNSoundModule", "NameNotFoundException", e);
+      return null;
+    } catch (IOException e) {
+      Log.e("RNSoundModule", "IOException", e);
+      return null;
+    }
+    return mediaPlayer;
   }
 
   @ReactMethod
