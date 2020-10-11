@@ -1,6 +1,8 @@
 package com.zmxv.RNSound;
 
 import android.content.Context
+import android.content.pm.PackageManager;
+import android.content.res.AssetManager;
 import android.media.AudioManager
 import android.media.MediaPlayer
 import android.media.MediaPlayer.OnCompletionListener
@@ -35,7 +37,13 @@ open class Sound internal constructor(context:ReactApplicationContext):AudioMana
   }
 
   fun prepare(fileName: String, key: Double?, options: ReadableMap, callback: Callback) {
-    val player = createMediaPlayer(fileName)
+    val player: MediaPlayer? = null
+    if(options.hasKey("applicationId") && options.hasKey("useAssetDelivery") && options.getBoolean("useAssetDelivery")) {
+      Log.d("RNSoundModule", options.getString("applicationId"));
+      player = createMediaPlayer(fileName, options.getString("applicationId"));
+    } else {
+      player = createMediaPlayer(fileName);
+    }
     if (options.hasKey("speed")) {
       player!!.playbackParams = player.playbackParams.setSpeed(options.getDouble("speed").toFloat())
     }
@@ -184,6 +192,26 @@ open class Sound internal constructor(context:ReactApplicationContext):AudioMana
     return null
   }
 
+  protected fun createMediaPlayer(fileName: String?, applicationId: String?): MediaPlayer? {
+    var context: Context? = null
+    val mediaPlayer: MediaPlayer = MediaPlayer()
+    Log.i("RNSoundModule", fileName)
+    try {
+      context = this.context.createPackageContext(applicationId, 0)
+      val assetManager: AssetManager = context.getAssets()
+      val afd: AssetFileDescriptor = assetManager.openFd(fileName)
+      mediaPlayer.setDataSource(afd.getFileDescriptor(), afd.getStartOffset(), afd.getLength())
+      afd.close()
+    } catch (e: PackageManager.NameNotFoundException) {
+      e.printStackTrace()
+      Log.e("RNSoundModule", "NameNotFoundException", e)
+      return null
+    } catch (e: IOException) {
+      Log.e("RNSoundModule", "IOException", e)
+      return null
+    }
+    return mediaPlayer
+  }
 
   fun play(key: Double?, callback: Callback?) {
     val player = playerPool[key]
