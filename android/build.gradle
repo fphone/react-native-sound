@@ -115,7 +115,7 @@ dependencies {
   //noinspection GradleDynamicVersion
   implementation "com.facebook.react:react-native:+"
   implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
-  implementation 'com.google.android.play:core:1.8.2'
+  implementation 'com.google.android.play:asset-delivery:2.2.2'
 }
 
 if (isNewArchitectureEnabled()) {
@@ -125,3 +125,4 @@ if (isNewArchitectureEnabled()) {
     codegenJavaPackageName = "com.zmxv.RNSound"
   }
 }
+
