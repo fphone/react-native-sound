@@ -3,6 +3,7 @@ package com.zmxv.RNSound;
 import android.content.Context
 import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
+import android.content.res.AssetFileDescriptor;
 import android.media.AudioManager
 import android.media.MediaPlayer
 import android.media.MediaPlayer.OnCompletionListener
@@ -37,10 +38,11 @@ open class Sound internal constructor(context:ReactApplicationContext):AudioMana
   }
 
   fun prepare(fileName: String, key: Double?, options: ReadableMap, callback: Callback) {
-    val player: MediaPlayer? = null
+    var player: MediaPlayer? = null
     if(options.hasKey("applicationId") && options.hasKey("useAssetDelivery") && options.getBoolean("useAssetDelivery")) {
-      Log.d("RNSoundModule", options.getString("applicationId"));
-      player = createMediaPlayer(fileName, options.getString("applicationId"));
+      val applicationId = options.getString("applicationId")
+      Log.d("RNSoundModule", applicationId ?: "null");
+      player = createMediaPlayer(fileName, applicationId);
     } else {
       player = createMediaPlayer(fileName);
     }
@@ -195,12 +197,12 @@ open class Sound internal constructor(context:ReactApplicationContext):AudioMana
   protected fun createMediaPlayer(fileName: String?, applicationId: String?): MediaPlayer? {
     var context: Context? = null
     val mediaPlayer: MediaPlayer = MediaPlayer()
-    Log.i("RNSoundModule", fileName)
+    Log.i("RNSoundModule", fileName ?: "null")
     try {
-      context = this.context.createPackageContext(applicationId, 0)
-      val assetManager: AssetManager = context.getAssets()
-      val afd: AssetFileDescriptor = assetManager.openFd(fileName)
-      mediaPlayer.setDataSource(afd.getFileDescriptor(), afd.getStartOffset(), afd.getLength())
+      context = reactContext.createPackageContext(applicationId ?: return null, 0)
+      val assetManager: AssetManager = context?.assets ?: return null
+      val afd: AssetFileDescriptor = assetManager.openFd(fileName ?: return null)
+      mediaPlayer.setDataSource(afd.fileDescriptor, afd.startOffset, afd.length)
       afd.close()
     } catch (e: PackageManager.NameNotFoundException) {
       e.printStackTrace()
